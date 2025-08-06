@@ -23,7 +23,6 @@ contract PokingAddresses {
     address constant btc            = 0xf185d0682d50819263941e5f4EacC763CC5C6C42;
     address constant eth            = 0x81FE72B5A8d1A857d176C3E7d5Bd2679A9B85763;
     address constant wsteth         = 0xFe7a2aC0B945f12089aEEB6eCebf4F384D9f043F;
-    address constant mkr            = 0x4F94e33D0D74CfF5Ca0D3a66F1A650628551C56b;
     address constant sky            = 0x511485bBd96e7e3a056a8D1b84C5071071C52D6F;
 
     address constant guniv3daiusdc1 = 0x7F6d78CC0040c87943a0e0c140De3F77a273bd58;
@@ -45,7 +44,6 @@ contract MegaPoker is PokingAddresses {
         (ok,) = btc.call(abi.encodeWithSelector(0x18178358));
         (ok,) = eth.call(abi.encodeWithSelector(0x18178358));
         (ok,) = wsteth.call(abi.encodeWithSelector(0x18178358));
-        (ok,) = mkr.call(abi.encodeWithSelector(0x18178358));
         (ok,) = sky.call(abi.encodeWithSelector(0x18178358));
 
         // poke(bytes32) = 0x1504460f
@@ -57,7 +55,6 @@ contract MegaPoker is PokingAddresses {
         (ok,) = spotter.call(abi.encodeWithSelector(0x1504460f, bytes32("WBTC-C")));
         (ok,) = spotter.call(abi.encodeWithSelector(0x1504460f, bytes32("WSTETH-A")));
         (ok,) = spotter.call(abi.encodeWithSelector(0x1504460f, bytes32("WSTETH-B")));
-        (ok,) = spotter.call(abi.encodeWithSelector(0x1504460f, bytes32("LSE-MKR-A")));
         (ok,) = spotter.call(abi.encodeWithSelector(0x1504460f, bytes32("LSEV2-SKY-A")));
 
         // Daily pokes, i.e. reduced cost pokes
