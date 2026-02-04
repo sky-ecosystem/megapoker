@@ -25,10 +25,6 @@ contract PokingAddresses {
     address constant wsteth         = 0xFe7a2aC0B945f12089aEEB6eCebf4F384D9f043F;
     address constant sky            = 0x511485bBd96e7e3a056a8D1b84C5071071C52D6F;
 
-    address constant guniv3daiusdc1 = 0x7F6d78CC0040c87943a0e0c140De3F77a273bd58;
-    address constant guniv3daiusdc2 = 0xcCBa43231aC6eceBd1278B90c3a44711a00F4e93;
-    address constant univ2daiusdc   = 0x25D03C2C928ADE19ff9f4FFECc07d991d0df054B;
-
     // Spotter
     address constant spotter        = 0x65C79fcB50Ca1594B025960e539eD7A9a6D434A3;
 }
@@ -57,22 +53,5 @@ contract MegaPoker is PokingAddresses {
         (ok,) = spotter.call(abi.encodeWithSelector(0x1504460f, bytes32("WSTETH-B")));
         (ok,) = spotter.call(abi.encodeWithSelector(0x1504460f, bytes32("LSEV2-SKY-A")));
 
-        // Daily pokes, i.e. reduced cost pokes
-        if (last <= block.timestamp - 1 days) {
-            // Poke
-            // The GUINIV3DAIUSDCX Oracles are very expensive to poke, and the
-            // price should not change frequently, so they are getting poked
-            // only once a day.
-            (ok,) = guniv3daiusdc1.call(abi.encodeWithSelector(0x18178358));
-            (ok,) = guniv3daiusdc2.call(abi.encodeWithSelector(0x18178358));
-            (ok,) = univ2daiusdc.call(abi.encodeWithSelector(0x18178358));
-
-            // Spotter pokes
-            (ok,) = spotter.call(abi.encodeWithSelector(0x1504460f, bytes32("GUNIV3DAIUSDC1-A")));
-            (ok,) = spotter.call(abi.encodeWithSelector(0x1504460f, bytes32("GUNIV3DAIUSDC2-A")));
-            (ok,) = spotter.call(abi.encodeWithSelector(0x1504460f, bytes32("UNIV2DAIUSDC-A")));
-
-            last = block.timestamp;
-        }
     }
 }
