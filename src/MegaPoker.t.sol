@@ -205,10 +205,8 @@ contract MegaPokerTest is DSTest, PokingAddresses {
         // To update osms without any value yet
         hevm.warp(block.timestamp + 1 hours);
         megaPoker.poke();
-        assertEq(megaPoker.last(), block.timestamp);
         hevm.warp(block.timestamp + 1 hours);
         megaPoker.poke();
-        assertEq(megaPoker.last(), block.timestamp - 1 hours);
 
         // Hacking nxt price to 0x123 (and making it valid)
         bytes32 hackedValue = 0x0000000000000000000000000000000100000000000000000000000000000123;

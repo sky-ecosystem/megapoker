@@ -30,9 +30,6 @@ contract PokingAddresses {
 }
 
 contract MegaPoker is PokingAddresses {
-
-    uint256 public last;
-
     function poke() external {
         bool ok;
 
@@ -52,6 +49,5 @@ contract MegaPoker is PokingAddresses {
         (ok,) = spotter.call(abi.encodeWithSelector(0x1504460f, bytes32("WSTETH-A")));
         (ok,) = spotter.call(abi.encodeWithSelector(0x1504460f, bytes32("WSTETH-B")));
         (ok,) = spotter.call(abi.encodeWithSelector(0x1504460f, bytes32("LSEV2-SKY-A")));
-
     }
 }
