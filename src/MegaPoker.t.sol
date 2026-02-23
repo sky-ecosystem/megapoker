@@ -18,8 +18,7 @@
 
 pragma solidity ^0.6.12;
 
-import "ds-test/test.sol";
-
+import "forge-std/Test.sol";
 import "./MegaPoker.sol";
 
 interface SpellLike {
@@ -73,7 +72,7 @@ interface Hevm {
     function store(address,bytes32,bytes32) external;
 }
 
-contract MegaPokerTest is DSTest, PokingAddresses {
+contract MegaPokerTest is Test, PokingAddresses {
     SpellLike    constant spell     = SpellLike(0x530708D653D540B3FcE6dF02da95588834aD39f2);
 
     ChainLogLike constant changelog = ChainLogLike(0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F);

@@ -15,4 +15,4 @@ jobs:
         version: nightly
 
     - name: Run tests
-      run: ETH_RPC_URL=${{ secrets.ETH_RPC_URL }} ./scripts/test-forge.sh
+      run: ETH_RPC_URL=${{ secrets.ETH_RPC_URL }} ./scripts/test.sh
