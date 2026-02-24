@@ -5,4 +5,4 @@ libs = ["lib"]
 solc_version = "0.6.12"
 optimizer = true
 optimizer_runs = 1000
-remappings = ["ds-test/=lib/ds-test/src/"]
+evm_version = "cancun"

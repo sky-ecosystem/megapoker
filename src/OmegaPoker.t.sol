@@ -18,8 +18,9 @@
 
 pragma solidity ^0.6.11;
 
-import "ds-test/test.sol";
+pragma experimental ABIEncoderV2;
 
+import "forge-std/Test.sol";
 import "./OmegaPoker.sol";
 
 interface SpellLike {
@@ -69,7 +70,7 @@ interface RegistryLike {
 }
 
 
-contract OmegaPokerTest is DSTest {
+contract OmegaPokerTest is Test {
     SpellLike    constant spell     = SpellLike(address(0));
     SpellLike    constant prevSpell = SpellLike(address(0));
 
