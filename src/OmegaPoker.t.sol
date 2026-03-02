@@ -64,6 +64,7 @@ interface OsmLike {
 }
 
 interface RegistryLike {
+    function list() external returns (bytes32[] memory);
     function pip(bytes32) external returns (address);
     function file(bytes32,bytes32,address) external;
     function removeAuth(bytes32) external;
@@ -173,26 +174,66 @@ contract OmegaPokerTest is Test {
         assertTrue(ilkcount > 1);
         assertTrue(osmcount > 1);
 
-        RegistryLike(registry).removeAuth("BAT-A"); // Remove Ilk + OSM
+        // Dynamically find ilks for each scenario rather than hardcoding names,
+        // since mainnet registry state evolves over time.
+        bytes32 uniqueOsmIlk;  // ilk whose PIP is not shared with any other ilk
+        bytes32 sharedOsmIlk;  // ilk whose PIP is shared with at least one other ilk
+        bytes32 noOsmIlk;      // ilk in registry whose PIP doesn't respond to src()
 
+        for (uint i = 0; i < ilkcount; i++) {
+            if (uniqueOsmIlk != bytes32(0) && sharedOsmIlk != bytes32(0)) break;
+            bytes32 ilk = omegaPoker.ilks(i);
+            address pip = RegistryLike(registry).pip(ilk);
+            uint pipCount = 0;
+            for (uint j = 0; j < ilkcount; j++) {
+                if (RegistryLike(registry).pip(omegaPoker.ilks(j)) == pip) {
+                    pipCount++;
+                }
+            }
+            if (pipCount == 1 && uniqueOsmIlk == bytes32(0)) {
+                uniqueOsmIlk = ilk;
+            } else if (pipCount > 1 && sharedOsmIlk == bytes32(0)) {
+                sharedOsmIlk = ilk;
+            }
+        }
+
+        bytes32[] memory allIlks = RegistryLike(registry).list();
+        for (uint i = 0; i < allIlks.length; i++) {
+            if (noOsmIlk != bytes32(0)) break;
+            if (RegistryLike(registry).pip(allIlks[i]) == address(0)) continue;
+            bool inOmega = false;
+            for (uint j = 0; j < ilkcount; j++) {
+                if (allIlks[i] == omegaPoker.ilks(j)) {
+                    inOmega = true;
+                    break;
+                }
+            }
+            if (!inOmega) {
+                noOsmIlk = allIlks[i];
+            }
+        }
+
+        assertTrue(uniqueOsmIlk != bytes32(0));
+        assertTrue(sharedOsmIlk != bytes32(0));
+        assertTrue(noOsmIlk != bytes32(0));
+
+        // Remove ilk with unique OSM — both counts should decrease
+        RegistryLike(registry).removeAuth(uniqueOsmIlk);
         omegaPoker.refresh();
+        assertEq(omegaPoker.ilkCount(), --ilkcount);
+        assertEq(omegaPoker.osmCount(), --osmcount);
 
-        assertEq(omegaPoker.ilkCount(), --ilkcount);  // Remove BAT-A ilk from spot call
-        assertEq(omegaPoker.osmCount(), --osmcount);  // Remove bat osm
-
-        RegistryLike(registry).removeAuth("ETH-A"); // Remove Ilk but leave OSM
-
+        // Remove ilk with shared OSM — only ilkCount should decrease
+        RegistryLike(registry).removeAuth(sharedOsmIlk);
         omegaPoker.refresh();
+        assertEq(omegaPoker.ilkCount(), --ilkcount);
+        assertEq(omegaPoker.osmCount(), osmcount);
 
-        assertEq(omegaPoker.ilkCount(), --ilkcount);  // Remove ETH-A ilk from spotter call
-        assertEq(omegaPoker.osmCount(), osmcount);    // Do not remove osm because it's used by ETH-B, etc.
-
-        RegistryLike(registry).removeAuth("USDC-A"); // Remove ilk without OSM
-
+        // Remove ilk without OSM — neither count should change
+        RegistryLike(registry).removeAuth(noOsmIlk);
         omegaPoker.refresh();
-
-        assertEq(omegaPoker.ilkCount(), ilkcount);    // Ilk should not have been poked because no OSM
-        assertEq(omegaPoker.osmCount(), osmcount);    // No osm to remove
+        assertEq(omegaPoker.ilkCount(), ilkcount);
+        assertEq(omegaPoker.osmCount(), osmcount);
     }
 
     function testRefreshZeroPip() public {
@@ -208,7 +249,7 @@ contract OmegaPokerTest is Test {
 
         // Ensure we can still refresh and poke
         omegaPoker.refresh();
-        
+
         for (uint i = 0; i < omegaPoker.osmCount(); i++) {
             address osm = omegaPoker.osms(i);
             assertTrue(osm != address(0));
