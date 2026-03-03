@@ -178,7 +178,7 @@ contract OmegaPokerTest is Test {
         // since mainnet registry state evolves over time.
         bytes32 uniqueOsmIlk;  // ilk whose PIP is not shared with any other ilk
         bytes32 sharedOsmIlk;  // ilk whose PIP is shared with at least one other ilk
-        bytes32 noOsmIlk;      // ilk in registry whose PIP doesn't respond to src()
+        bytes32 noOsmIlk;      // ilk in registry but not tracked by OmegaPoker (no OSM)
 
         for (uint i = 0; i < ilkcount; i++) {
             if (uniqueOsmIlk != bytes32(0) && sharedOsmIlk != bytes32(0)) break;
