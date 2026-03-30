@@ -54,11 +54,6 @@ interface TokenLike {
     function approve(address, uint256) external;
 }
 
-interface Hevm {
-    function warp(uint256) external;
-    function store(address,bytes32,bytes32) external;
-}
-
 interface OsmLike {
     function pass() external view returns (bool);
 }
@@ -81,25 +76,20 @@ contract OmegaPokerTest is Test {
     ChiefLike chief;
     TokenLike govToken;
 
-    Hevm hevm;
-
     OmegaPoker omegaPoker;
 
-    bytes20 constant CHEAT_CODE = bytes20(uint160(uint256(keccak256('hevm cheat code'))));
-
     function setUp() public {
-        hevm = Hevm(address(CHEAT_CODE));
         omegaPoker = new OmegaPoker();
         omegaPoker.refresh();
         pause = PauseLike(changelog.getAddress("MCD_PAUSE"));
         chief = ChiefLike(changelog.getAddress("MCD_ADM"));
         govToken = TokenLike(changelog.getAddress("MCD_GOV"));
-        hevm.warp(now + 3600);
+        vm.warp(now + 3600);
     }
 
     function vote(SpellLike spell_) private {
         if (chief.hat() != address(spell_)) {
-            hevm.store(
+            vm.store(
                 address(govToken),
                 keccak256(abi.encode(address(this), uint256(1))),
                 bytes32(uint256(999999999999 ether))
@@ -140,7 +130,7 @@ contract OmegaPokerTest is Test {
             castTime += 14 hours - hour * 3600;
         }
 
-        hevm.warp(castTime);
+        vm.warp(castTime);
         spell_.cast();
     }
 
@@ -166,7 +156,7 @@ contract OmegaPokerTest is Test {
 
     function testRefresh() public {
         address registry = address(omegaPoker.registry());
-        hevm.store(registry, keccak256(abi.encode(address(this), uint(0))), bytes32(uint(1)));
+        vm.store(registry, keccak256(abi.encode(address(this), uint(0))), bytes32(uint(1)));
 
         uint256 ilkcount = omegaPoker.ilkCount();
         uint256 osmcount = omegaPoker.osmCount();
@@ -237,7 +227,7 @@ contract OmegaPokerTest is Test {
     function testRefreshZeroPip() public {
         // grant ourselves authority on the ilk registry
         address registry = address(omegaPoker.registry());
-        hevm.store(registry, keccak256(abi.encode(address(this), uint(0))), bytes32(uint(1)));
+        vm.store(registry, keccak256(abi.encode(address(this), uint(0))), bytes32(uint(1)));
 
         // Ensure we can refresh and poke
         omegaPoker.refresh();
