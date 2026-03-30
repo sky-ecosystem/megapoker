@@ -205,22 +205,22 @@ contract OmegaPokerTest is Test {
         if (uniqueOsmIlk != bytes32(0)) {
             RegistryLike(registry).removeAuth(uniqueOsmIlk);
             omegaPoker.refresh();
-            assertEq(omegaPoker.ilkCount(), --ilkcount);
-            assertEq(omegaPoker.osmCount(), --osmcount);
+            assertEq(omegaPoker.ilkCount(), --ilkcount); // Ilk should have been removed
+            assertEq(omegaPoker.osmCount(), --osmcount); // OSM should have been removed
         }
 
         if (sharedOsmIlk != bytes32(0)) {
             RegistryLike(registry).removeAuth(sharedOsmIlk);
             omegaPoker.refresh();
-            assertEq(omegaPoker.ilkCount(), --ilkcount);
-            assertEq(omegaPoker.osmCount(), osmcount);
+            assertEq(omegaPoker.ilkCount(), --ilkcount); // Ilk should have been removed
+            assertEq(omegaPoker.osmCount(), osmcount); // OSM should not have been removed because it is shared
         }
 
         if (noOsmIlk != bytes32(0)) {
             RegistryLike(registry).removeAuth(noOsmIlk);
             omegaPoker.refresh();
-            assertEq(omegaPoker.ilkCount(), ilkcount);
-            assertEq(omegaPoker.osmCount(), osmcount);
+            assertEq(omegaPoker.ilkCount(), ilkcount); // Ilk should not have been poked because no OSM
+            assertEq(omegaPoker.osmCount(), osmcount); // No OSM to remove
         }
     }
 
