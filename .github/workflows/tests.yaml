@@ -15,4 +15,6 @@ jobs:
         version: stable
 
     - name: Run tests
-      run: ETH_RPC_URL=${{ secrets.ETH_RPC_URL }} make test
+      env:
+        ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
+      run: make test
