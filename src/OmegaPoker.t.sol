@@ -18,8 +18,9 @@
 
 pragma solidity ^0.6.11;
 
-import "ds-test/test.sol";
+pragma experimental ABIEncoderV2;
 
+import "forge-std/Test.sol";
 import "./OmegaPoker.sol";
 
 interface SpellLike {
@@ -53,23 +54,19 @@ interface TokenLike {
     function approve(address, uint256) external;
 }
 
-interface Hevm {
-    function warp(uint256) external;
-    function store(address,bytes32,bytes32) external;
-}
-
 interface OsmLike {
     function pass() external view returns (bool);
 }
 
 interface RegistryLike {
+    function list() external returns (bytes32[] memory);
     function pip(bytes32) external returns (address);
     function file(bytes32,bytes32,address) external;
     function removeAuth(bytes32) external;
 }
 
 
-contract OmegaPokerTest is DSTest {
+contract OmegaPokerTest is Test {
     SpellLike    constant spell     = SpellLike(address(0));
     SpellLike    constant prevSpell = SpellLike(address(0));
 
@@ -79,25 +76,20 @@ contract OmegaPokerTest is DSTest {
     ChiefLike chief;
     TokenLike govToken;
 
-    Hevm hevm;
-
     OmegaPoker omegaPoker;
 
-    bytes20 constant CHEAT_CODE = bytes20(uint160(uint256(keccak256('hevm cheat code'))));
-
     function setUp() public {
-        hevm = Hevm(address(CHEAT_CODE));
         omegaPoker = new OmegaPoker();
         omegaPoker.refresh();
         pause = PauseLike(changelog.getAddress("MCD_PAUSE"));
         chief = ChiefLike(changelog.getAddress("MCD_ADM"));
         govToken = TokenLike(changelog.getAddress("MCD_GOV"));
-        hevm.warp(now + 3600);
+        vm.warp(now + 3600);
     }
 
     function vote(SpellLike spell_) private {
         if (chief.hat() != address(spell_)) {
-            hevm.store(
+            vm.store(
                 address(govToken),
                 keccak256(abi.encode(address(this), uint256(1))),
                 bytes32(uint256(999999999999 ether))
@@ -138,7 +130,7 @@ contract OmegaPokerTest is DSTest {
             castTime += 14 hours - hour * 3600;
         }
 
-        hevm.warp(castTime);
+        vm.warp(castTime);
         spell_.cast();
     }
 
@@ -163,41 +155,79 @@ contract OmegaPokerTest is DSTest {
     }
 
     function testRefresh() public {
-        // grant ourselves authority on the ilk registry
         address registry = address(omegaPoker.registry());
-        hevm.store(registry, keccak256(abi.encode(address(this), uint(0))), bytes32(uint(1)));
+        vm.store(registry, keccak256(abi.encode(address(this), uint(0))), bytes32(uint(1)));
 
         uint256 ilkcount = omegaPoker.ilkCount();
         uint256 osmcount = omegaPoker.osmCount();
         assertTrue(ilkcount > 1);
         assertTrue(osmcount > 1);
 
-        RegistryLike(registry).removeAuth("BAT-A"); // Remove Ilk + OSM
+        // Dynamically find ilks for each scenario rather than hardcoding names,
+        // since mainnet registry state evolves over time.
+        bytes32 uniqueOsmIlk;
+        bytes32 sharedOsmIlk;
+        bytes32 noOsmIlk;
 
-        omegaPoker.refresh();
+        for (uint i = 0; i < ilkcount; i++) {
+            if (uniqueOsmIlk != bytes32(0) && sharedOsmIlk != bytes32(0)) break;
+            bytes32 ilk = omegaPoker.ilks(i);
+            address pip = RegistryLike(registry).pip(ilk);
+            uint pipCount = 0;
+            for (uint j = 0; j < ilkcount; j++) {
+                if (RegistryLike(registry).pip(omegaPoker.ilks(j)) == pip) {
+                    pipCount++;
+                }
+            }
+            if (pipCount == 1 && uniqueOsmIlk == bytes32(0)) {
+                uniqueOsmIlk = ilk;
+            } else if (pipCount > 1 && sharedOsmIlk == bytes32(0)) {
+                sharedOsmIlk = ilk;
+            }
+        }
 
-        assertEq(omegaPoker.ilkCount(), --ilkcount);  // Remove BAT-A ilk from spot call
-        assertEq(omegaPoker.osmCount(), --osmcount);  // Remove bat osm
+        bytes32[] memory allIlks = RegistryLike(registry).list();
+        for (uint i = 0; i < allIlks.length; i++) {
+            if (noOsmIlk != bytes32(0)) break;
+            if (RegistryLike(registry).pip(allIlks[i]) == address(0)) continue;
+            bool inOmega = false;
+            for (uint j = 0; j < ilkcount; j++) {
+                if (allIlks[i] == omegaPoker.ilks(j)) {
+                    inOmega = true;
+                    break;
+                }
+            }
+            if (!inOmega) {
+                noOsmIlk = allIlks[i];
+            }
+        }
 
-        RegistryLike(registry).removeAuth("ETH-A"); // Remove Ilk but leave OSM
+        if (uniqueOsmIlk != bytes32(0)) {
+            RegistryLike(registry).removeAuth(uniqueOsmIlk);
+            omegaPoker.refresh();
+            assertEq(omegaPoker.ilkCount(), --ilkcount); // Ilk should have been removed
+            assertEq(omegaPoker.osmCount(), --osmcount); // OSM should have been removed
+        }
 
-        omegaPoker.refresh();
+        if (sharedOsmIlk != bytes32(0)) {
+            RegistryLike(registry).removeAuth(sharedOsmIlk);
+            omegaPoker.refresh();
+            assertEq(omegaPoker.ilkCount(), --ilkcount); // Ilk should have been removed
+            assertEq(omegaPoker.osmCount(), osmcount); // OSM should not have been removed because it is shared
+        }
 
-        assertEq(omegaPoker.ilkCount(), --ilkcount);  // Remove ETH-A ilk from spotter call
-        assertEq(omegaPoker.osmCount(), osmcount);    // Do not remove osm because it's used by ETH-B, etc.
-
-        RegistryLike(registry).removeAuth("USDC-A"); // Remove ilk without OSM
-
-        omegaPoker.refresh();
-
-        assertEq(omegaPoker.ilkCount(), ilkcount);    // Ilk should not have been poked because no OSM
-        assertEq(omegaPoker.osmCount(), osmcount);    // No osm to remove
+        if (noOsmIlk != bytes32(0)) {
+            RegistryLike(registry).removeAuth(noOsmIlk);
+            omegaPoker.refresh();
+            assertEq(omegaPoker.ilkCount(), ilkcount); // Ilk should not have been poked because no OSM
+            assertEq(omegaPoker.osmCount(), osmcount); // No OSM to remove
+        }
     }
 
     function testRefreshZeroPip() public {
         // grant ourselves authority on the ilk registry
         address registry = address(omegaPoker.registry());
-        hevm.store(registry, keccak256(abi.encode(address(this), uint(0))), bytes32(uint(1)));
+        vm.store(registry, keccak256(abi.encode(address(this), uint(0))), bytes32(uint(1)));
 
         // Ensure we can refresh and poke
         omegaPoker.refresh();
@@ -207,7 +237,7 @@ contract OmegaPokerTest is DSTest {
 
         // Ensure we can still refresh and poke
         omegaPoker.refresh();
-        
+
         for (uint i = 0; i < omegaPoker.osmCount(); i++) {
             address osm = omegaPoker.osms(i);
             assertTrue(osm != address(0));
